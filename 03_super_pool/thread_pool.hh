@@ -2,6 +2,7 @@
 #include <vector>
 #include <queue>
 #include <mutex>
+#include <atomic>
 #include <condition_variable>
 
 struct Actor
@@ -92,6 +93,22 @@ void stop_pools()
 
 
 
+struct Spin_mutex
+{
+    void lock()
+    {
+        while (f.test_and_set());
+    }
+
+    void unlock()
+    {
+        f.clear ();
+    }
+
+private:
+    std::atomic_flag f = ATOMIC_FLAG_INIT ;
+};
+
 struct Super_thread_pool
 {
     /// Creates a pool with @nthreads number of threads.
@@ -107,7 +124,7 @@ struct Super_thread_pool
     /// Places actor @a to execution queue.
     void submit(Actor *a)
     {
-        std::unique_lock<std::mutex> locker(mutex);
+        std::unique_lock<Spin_mutex> locker(smutex);
         int i  = rand() % pools.size();
         // распределение, результат в i
         pools[i]->submit(a);
@@ -116,7 +133,7 @@ struct Super_thread_pool
     /// Waits for all threads to finish.
     void wait()
     {
-        std::unique_lock<std::mutex> locker(mutex);
+        std::unique_lock<Spin_mutex> locker(smutex);
         for (auto pool: pools)
         {
             pool->wait();
@@ -126,7 +143,7 @@ struct Super_thread_pool
     /// Stops processing of actors.
     void stop()
     {
-        std::unique_lock<std::mutex> locker(mutex);
+        std::unique_lock<Spin_mutex> locker(smutex);
         for (auto pool: pools)
         {
             pool->stop();
@@ -135,6 +152,6 @@ struct Super_thread_pool
 
 private:
     std::vector<Thread_pool*> pools;
-    std::mutex mutex;
+    Spin_mutex smutex;
 
 };
