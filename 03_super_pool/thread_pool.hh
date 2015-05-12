@@ -13,7 +13,7 @@ struct Actor
 struct Thread_pool 
 {
 
-	/// Creates a pool with @nthreads number of threads.
+    /// Creates a pool with @nthreads number of threads.
     explicit Thread_pool(int nthreads = std::thread::hardware_concurrency())
             : stop_flag(false), actors()
     {
@@ -72,7 +72,7 @@ private:
                 actors.pop();
 
                 locker.unlock();
-                //std::cout << std::this_thread::get_id() << std::endl;
+                // std::cout << std::this_thread::get_id() << std::endl;
                 // std::cout << stop_flag << std::endl;
                 task->act();
                 locker.lock();
@@ -122,7 +122,6 @@ struct Super_thread_pool
     /// Waits for all threads to finish.
     void wait()
     {
-        std::unique_lock<Spin_mutex> locker(s_mutex);
         for (auto pool: pools)
         {
             pool->wait();
@@ -132,7 +131,6 @@ struct Super_thread_pool
     /// Stops processing of actors.
     void stop()
     {
-        std::unique_lock<Spin_mutex> locker(s_mutex);
         for (auto pool: pools)
         {
             pool->stop();

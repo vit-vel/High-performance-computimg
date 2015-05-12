@@ -34,11 +34,12 @@ struct Hello_actor: public Actor {
         {
             int rank = omp_get_thread_num();
             int nthreads = omp_get_num_threads();
+            for (int i = 0; i < 1e8; ++i) {}
             std::stringstream msg;
             msg << "Hello from " << rank+1 << '/' << nthreads << std::endl;
             //std::cout << msg.str();
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
         stop_pools();
 	}
 };
@@ -48,10 +49,11 @@ int main()
 {
     for(int i = 0; i < 10; ++i)
     {
-        //__cpu_pool.submit(new Hello_actor);
+        __cpu_pool.submit(new Hello_actor);
         sthp.submit(new Hello_actor);
     }
 
+    //stop_pools();
     __cpu_pool.wait();
     __io_pool.wait();
 
