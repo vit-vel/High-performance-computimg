@@ -72,7 +72,7 @@ private:
                 actors.pop();
 
                 locker.unlock();
-                std::cout << std::this_thread::get_id() << std::endl;
+                //std::cout << std::this_thread::get_id() << std::endl;
                 // std::cout << stop_flag << std::endl;
                 task->act();
                 locker.lock();
@@ -102,6 +102,7 @@ struct Super_thread_pool
     /// Creates a pool with @nthreads number of threads.
     explicit Super_thread_pool(int nthreads
                                 = std::thread::hardware_concurrency())
+        : count(0)
     {
         for (int i = 0; i < nthreads; ++i)
         {
@@ -112,16 +113,16 @@ struct Super_thread_pool
     /// Places actor @a to execution queue.
     void submit(Actor *a)
     {
-        std::unique_lock<Spin_mutex> locker(smutex);
-        int i  = rand() % pools.size();
-        // распределение, результат в i
+        std::unique_lock<Spin_mutex> locker(s_mutex);
+        // assignment
+        int i  = (count++) % pools.size();
         pools[i]->submit(a);
     }
 
     /// Waits for all threads to finish.
     void wait()
     {
-        std::unique_lock<Spin_mutex> locker(smutex);
+        std::unique_lock<Spin_mutex> locker(s_mutex);
         for (auto pool: pools)
         {
             pool->wait();
@@ -131,7 +132,7 @@ struct Super_thread_pool
     /// Stops processing of actors.
     void stop()
     {
-        std::unique_lock<Spin_mutex> locker(smutex);
+        std::unique_lock<Spin_mutex> locker(s_mutex);
         for (auto pool: pools)
         {
             pool->stop();
@@ -139,7 +140,8 @@ struct Super_thread_pool
     }
 
 private:
-    std::vector<Thread_pool*> pools;
-    Spin_mutex smutex;
+    std::vector<Thread_pool*>   pools;
+    Spin_mutex                  s_mutex;
+    unsigned short              count;
 
 };
