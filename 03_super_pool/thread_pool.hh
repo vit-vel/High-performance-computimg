@@ -81,18 +81,6 @@ private:
     }
 };
 
-Thread_pool __cpu_pool(1);
-Thread_pool __io_pool(1);
-
-/// Stops all pools at once.
-void stop_pools()
-{
-    __cpu_pool.stop();
-    __io_pool.stop();
-}
-
-
-
 struct Spin_mutex
 {
     void lock()
