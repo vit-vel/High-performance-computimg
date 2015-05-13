@@ -4,13 +4,49 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <thread>
+#include <functional>
+
+enum struct Result
+{
+    UNDEFINED,
+    DONE
+};
 
 struct Actor
 {
+    Actor(Actor *parent = nullptr) : parent_(parent)
+    {}
+
     virtual void act() = 0;
+    virtual void react(Actor *child) = 0;
+    virtual void run() = 0;
+
+    void done()
+    {
+        result = Result::DONE;
+    }
+
+    bool is_done()
+    {
+        return result == Result::DONE;
+    }
+
+    Actor* get_parent()
+    {
+        return parent_;
+    }
+
+private:
+    Actor *parent_;
+    Result result = Result::UNDEFINED;
+
 };
 
-struct Thread_pool 
+
+std::hash<Actor *> actor_hash;
+
+struct Thread_pool
 {
 
     /// Creates a pool with @nthreads number of threads.
@@ -40,8 +76,8 @@ struct Thread_pool
         }
     }
 
-	/// Stops processing of actors.
-	void stop()
+    /// Stops processing of actors.
+    void stop()
     {
         if (!stop_flag)
         {
@@ -68,13 +104,13 @@ private:
 
             while (!actors.empty() && !stop_flag)
             {
-                Actor* task = actors.front();
+                Actor* act = actors.front();
                 actors.pop();
 
                 locker.unlock();
                 // std::cout << std::this_thread::get_id() << std::endl;
                 // std::cout << stop_flag << std::endl;
-                task->act();
+                act->run();
                 locker.lock();
             }
         }
@@ -101,8 +137,8 @@ struct Super_thread_pool
 {
     /// Creates a pool with @nthreads number of threads.
     explicit Super_thread_pool(int nthreads
-                                = std::thread::hardware_concurrency())
-        : count(0)
+    = std::thread::hardware_concurrency())
+            : count(0)
     {
         for (int i = 0; i < nthreads; ++i)
         {
@@ -115,7 +151,15 @@ struct Super_thread_pool
     {
         std::unique_lock<Spin_mutex> locker(s_mutex);
         // assignment
-        int i  = (count++) % pools.size();
+        int i;
+        if (a->get_parent())
+        {
+            i = actor_hash(a->get_parent()) % 101;
+        } else
+        {
+            i = count++;
+        }
+        i = i % pools.size();
         pools[i]->submit(a);
     }
 
@@ -143,3 +187,5 @@ private:
     unsigned short              count;
 
 };
+
+Super_thread_pool global_pool(4);
